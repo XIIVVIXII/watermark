@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Scale Watermark - Center Lock</title>
+    <style>
+        body { font-family: 'Tahoma', sans-serif; background: #bfc9f7; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: #e8e9ec; padding: 25px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        .input-group { text-align: left; margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #ff8da1; }
+        input[type="file"] { width: 100%; padding: 10px; border: 2px dashed #ffc0cb; border-radius: 10px; box-sizing: border-box; background: #fffafb; cursor: pointer; margin-bottom: 10px; }
+        
+        /* สไตล์ของแถบเลื่อนปรับขนาด */
+        .slider-container { background: #fff0f3; padding: 15px; border-radius: 12px; margin: 15px 0; border: 1px solid #ffdae0; }
+        input[type="range"] { width: 100%; cursor: pointer; accent-color: #ffb6c1; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 13px; color: #888; margin-top: 5px; }
+
+        .preview-box { margin: 20px 0; background: #95a6f0; border-radius: 15px; min-height: 250px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #eee; }
+        canvas { max-width: 100%; height: auto; display: none; }
+        
+        #downloadBtn { width: 100%; padding: 16px; border: none; border-radius: 12px; background: #ffb6c1; color: white; font-size: 18px; font-weight: bold; cursor: pointer; display: none; transition: 0.3s; }
+        #downloadBtn:hover { background: #ff99aa; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 style="color: #5a5151; margin-top: 0;">ใส่ลายน้ำ</h2>
+    
+    <div class="input-group">
+        <label>📸 1. เลือกรูปภาพ:</label>
+        <input type="file" id="mainInput" accept="image/*">
+    </div>
+
+    <div class="input-group">
+        <label>🎨 2. เลือกลายน้ำ:</label>
+        <input type="file" id="markInput" accept="image/*">
+    </div>
+
+    <div class="slider-container">
+        <label>📏 3. ปรับขนาดลายน้ำ:</label>
+        <input type="range" id="sizeSlider" min="10" max="200" value="80">
+        <div class="slider-label">
+            <span>เล็ก</span>
+            <span id="sizeValue">80%</span>
+            <span>ใหญ่มาก</span>
+        </div>
+    </div>
+
+    <div class="preview-box">
+        <span id="placeholder" style="color:#1d0c0c">ตัวอย่างภาพจะปรากฏที่นี่</span>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <button id="downloadBtn">📥 ดาวน์โหลดรูปภาพ</button>
+</div>
+
+<script>
+    const mainInput = document.getElementById('mainInput');
+    const markInput = document.getElementById('markInput');
+    const sizeSlider = document.getElementById('sizeSlider');
+    const sizeValue = document.getElementById('sizeValue');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let images = { main: null, watermark: null };
+
+    function readImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    mainInput.onchange = async (e) => {
+        if (e.target.files[0]) {
+            images.main = await readImage(e.target.files[0]);
+            render();
+        }
+    };
+
+    markInput.onchange = async (e) => {
+        if (e.target.files[0]) {
+            images.watermark = await readImage(e.target.files[0]);
+            render();
+        }
+    };
+
+    // เมื่อมีการเลื่อน Slider ให้วาดใหม่ทันที
+    sizeSlider.oninput = () => {
+        sizeValue.innerText = sizeSlider.value + '%';
+        render();
+    };
+
+    function render() {
+        if (!images.main) return;
+
+        document.getElementById('placeholder').style.display = 'none';
+        canvas.style.display = 'block';
+
+        canvas.width = images.main.width;
+        canvas.height = images.main.height;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(images.main, 0, 0);
+
+        if (images.watermark) {
+            ctx.globalAlpha = 0.2; // ความจางคงที่ 30% (ปรับแก้ในโค้ดได้)
+
+            // คำนวณขนาดตาม Slider (เทียบกับด้านที่สั้นที่สุดของภาพ)
+            const minSide = Math.min(images.main.width, images.main.height);
+            const scaleFactor = sizeSlider.value / 100; // แปลงค่า 10-200 เป็น 0.1-2.0
+            
+            const targetWidth = minSide * scaleFactor;
+            const ratio = targetWidth / images.watermark.width;
+            
+            const w = images.watermark.width * ratio;
+            const h = images.watermark.height * ratio;
+
+            // ล็อคตำแหน่งกึ่งกลางเสมอ
+            const x = (canvas.width - w) / 2;
+            const y = (canvas.height - h) / 2;
+
+            ctx.drawImage(images.watermark, x, y, w, h);
+            ctx.globalAlpha = 1.0;
+        }
+
+        downloadBtn.style.display = 'block';
+    }
+
+    downloadBtn.onclick = () => {
+        const link = document.createElement('a');
+        link.download = `custom_watermark_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+    };
+</script>
+
+</body>
+</html>
