@@ -3,69 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual Scale & Opacity Watermark - Center Lock</title>
+    <title>SYLVIE PHOTO - Watermark Tool</title>
     <style>
         body { font-family: 'Tahoma', sans-serif; background: #fdf2f4; display: flex; justify-content: center; padding: 20px; margin: 0; }
         .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
         .input-group { text-align: left; margin-bottom: 15px; }
-        label { font-weight: bold; display: block; margin-bottom: 8px; color: #ff8da1; }
-        input[type="file"] { width: 100%; padding: 10px; border: 2px dashed #ffc0cb; border-radius: 10px; box-sizing: border-box; background: #fffafb; cursor: pointer; margin-bottom: 10px; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #ff8da1; font-size: 14px; }
         
-        /* สไตล์ของแถบเลื่อน */
+        input[type="file"], select { 
+            width: 100%; padding: 12px; border: 2px solid #ffc0cb; border-radius: 10px; 
+            box-sizing: border-box; background: #fffafb; margin-bottom: 10px; outline: none; font-size: 14px;
+        }
+        
         .slider-container { background: #fff0f3; padding: 15px; border-radius: 12px; margin: 10px 0; border: 1px solid #ffdae0; text-align: left; }
         .slider-group { margin-bottom: 10px; }
-        .slider-group:last-child { margin-bottom: 0; }
-        .slider-header { font-weight: bold; color: #555; font-size: 14px; margin-bottom: 5px; display: block; }
-        
-        input[type="range"] { width: 100%; cursor: pointer; accent-color: #ffb6c1; margin: 0; }
-        .slider-label { display: flex; justify-content: space-between; font-size: 13px; color: #888; margin-top: 2px; }
+        input[type="range"] { width: 100%; cursor: pointer; accent-color: #ffb6c1; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 12px; color: #888; }
 
         .preview-box { margin: 20px 0; background: #333; border-radius: 15px; min-height: 250px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #eee; }
         canvas { max-width: 100%; height: auto; display: none; }
         
         #downloadBtn { width: 100%; padding: 16px; border: none; border-radius: 12px; background: #ffb6c1; color: white; font-size: 18px; font-weight: bold; cursor: pointer; display: none; transition: 0.3s; }
         #downloadBtn:hover { background: #ff99aa; transform: translateY(-2px); }
+        .flex-row { display: flex; gap: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2 style="color: #444; margin-top: 0;">ปรับลายน้ำเอง</h2>
+    <h2 style="color: #444; margin-top: 0;">SYLVIE PHOTO Watermark</h2>
     
     <div class="input-group">
-        <label>📸 1. เลือกรูปภาพหลัก:</label>
-        <input type="file" id="mainInput" accept="image/*">
+        <label>📸 1. เลือกรูปภาพหลัก & ลายน้ำ:</label>
+        <input type="file" id="mainInput" accept="image/*" style="margin-bottom: 5px;">
+        <input type="file" id="markInput" accept="image/*">
     </div>
 
     <div class="input-group">
-        <label>🎨 2. เลือกลายน้ำ:</label>
-        <input type="file" id="markInput" accept="image/*">
+        <label>📂 2. เลือกหมวดหมู่การตั้งชื่อ:</label>
+        <div class="flex-row">
+            <select id="toneSelect">
+                <option value="MOOD">🎨 MOOD TONE</option>
+                <option value="DARK">🌑 DARK TONE</option>
+                <option value="CUTE">🌸 CUTE TONE</option>
+                <option value="ZONE">💎 ZONE TONE</option>
+            </select>
+            <select id="styleSelect">
+                </select>
+        </div>
     </div>
 
     <div class="slider-container">
         <div class="slider-group">
-            <label for="sizeSlider" class="slider-header">📏 3. ปรับขนาดลายน้ำ:</label>
+            <label>📏 ปรับขนาดลายน้ำ: <span id="sizeValue">80%</span></label>
             <input type="range" id="sizeSlider" min="10" max="200" value="80">
-            <div class="slider-label">
-                <span>เล็ก</span>
-                <span id="sizeValue">80%</span>
-                <span>ใหญ่มาก</span>
-            </div>
         </div>
-
         <div class="slider-group">
-            <label for="opacitySlider" class="slider-header">👻 4. ปรับความเข้ม-จาง:</label>
+            <label>👻 ปรับความเข้ม-จาง: <span id="opacityValue">30%</span></label>
             <input type="range" id="opacitySlider" min="0" max="100" value="30">
-            <div class="slider-label">
-                <span>จาง</span>
-                <span id="opacityValue">30%</span>
-                <span>เข้ม</span>
-            </div>
         </div>
     </div>
 
     <div class="preview-box">
-        <span id="placeholder" style="color:#eee">ตัวอย่างภาพจะปรากฏที่นี่</span>
         <canvas id="canvas"></canvas>
     </div>
 
@@ -73,111 +72,87 @@
 </div>
 
 <script>
+    // ข้อมูลหมวดหมู่ตามที่คุณระบุ
+    const categories = {
+        'MOOD': ['single', 'couple'],
+        'DARK': ['single', 'couple'],
+        'CUTE': ['single', 'couple'],
+        'ZONE': ['semi-real', 'street', 'profile', 'festival', 'suit']
+    };
+
+    const toneSelect = document.getElementById('toneSelect');
+    const styleSelect = document.getElementById('styleSelect');
     const mainInput = document.getElementById('mainInput');
     const markInput = document.getElementById('markInput');
-    
-    // Size Slider
     const sizeSlider = document.getElementById('sizeSlider');
-    const sizeValue = document.getElementById('sizeValue');
-    
-    // Opacity Slider (เพิ่มใหม่)
     const opacitySlider = document.getElementById('opacitySlider');
-    const opacityValue = document.getElementById('opacityValue');
-    
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const downloadBtn = document.getElementById('downloadBtn');
 
+    function updateStyles() {
+        const selectedTone = toneSelect.value;
+        styleSelect.innerHTML = '';
+        categories[selectedTone].forEach(style => {
+            const option = document.createElement('option');
+            option.value = style;
+            option.textContent = style;
+            styleSelect.appendChild(option);
+        });
+    }
+
+    toneSelect.onchange = updateStyles;
+    updateStyles();
+
     let images = { main: null, watermark: null };
 
-    function readImage(file) {
-        return new Promise((resolve) => {
+    async function readImage(file) {
+        return new Promise(res => {
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = e => {
                 const img = new Image();
-                img.onload = () => resolve(img);
+                img.onload = () => res(img);
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         });
     }
 
-    mainInput.onchange = async (e) => {
-        if (e.target.files[0]) {
-            images.main = await readImage(e.target.files[0]);
-            render();
-        }
-    };
-
-    markInput.onchange = async (e) => {
-        if (e.target.files[0]) {
-            images.watermark = await readImage(e.target.files[0]);
-            render();
-        }
-    };
-
-    // การตอบสนองของ Slider ขนาด
-    sizeSlider.oninput = () => {
-        sizeValue.innerText = sizeSlider.value + '%';
-        render();
-    };
-
-    // การตอบสนองของ Slider ความเข้มจาง (เพิ่มใหม่)
-    opacitySlider.oninput = () => {
-        opacityValue.innerText = opacitySlider.value + '%';
-        render();
-    };
+    mainInput.onchange = async (e) => { if (e.target.files[0]) { images.main = await readImage(e.target.files[0]); render(); } };
+    markInput.onchange = async (e) => { if (e.target.files[0]) { images.watermark = await readImage(e.target.files[0]); render(); } };
+    sizeSlider.oninput = () => { document.getElementById('sizeValue').innerText = sizeSlider.value + '%'; render(); };
+    opacitySlider.oninput = () => { document.getElementById('opacityValue').innerText = opacitySlider.value + '%'; render(); };
 
     function render() {
         if (!images.main) return;
-
-        document.getElementById('placeholder').style.display = 'none';
         canvas.style.display = 'block';
-
         canvas.width = images.main.width;
         canvas.height = images.main.height;
-
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // วาดรูปหลักแบบทึบแสงปกติเสมอ
-        ctx.globalAlpha = 1.0; 
+        ctx.globalAlpha = 1.0;
         ctx.drawImage(images.main, 0, 0);
 
         if (images.watermark) {
-            // แก้ไขจุดนี้: ดึงค่าจาก Opacity Slider (0-100) มาแปลงเป็น 0.0 - 1.0
-            const alpha = opacitySlider.value / 100;
-            ctx.globalAlpha = alpha; 
-
-            // คำนวณขนาดตาม Slider (เทียบกับด้านที่สั้นที่สุดของภาพ)
+            ctx.globalAlpha = opacitySlider.value / 100;
             const minSide = Math.min(images.main.width, images.main.height);
-            const scaleFactor = sizeSlider.value / 100; // แปลงค่า 10-200 เป็น 0.1-2.0
-            
-            const targetWidth = minSide * scaleFactor;
-            const ratio = targetWidth / images.watermark.width;
-            
-            const w = images.watermark.width * ratio;
-            const h = images.watermark.height * ratio;
-
-            // ล็อคตำแหน่งกึ่งกลางเสมอ
-            const x = (canvas.width - w) / 2;
-            const y = (canvas.height - h) / 2;
-
-            ctx.drawImage(images.watermark, x, y, w, h);
-            
-            // คืนค่า globalAlpha เป็น 1.0 เผื่อมีการวาดอย่างอื่นต่อ
-            ctx.globalAlpha = 1.0;
+            const scale = (minSide * (sizeSlider.value / 100)) / images.watermark.width;
+            const w = images.watermark.width * scale;
+            const h = images.watermark.height * scale;
+            ctx.drawImage(images.watermark, (canvas.width-w)/2, (canvas.height-h)/2, w, h);
         }
-
         downloadBtn.style.display = 'block';
     }
 
     downloadBtn.onclick = () => {
+        const tone = toneSelect.value;
+        const style = styleSelect.value;
+        const name = `${tone}_${style}`; // ตัดช่องชื่อเพิ่มเติมออกแล้ว
+        
         const link = document.createElement('a');
-        link.download = `custom_watermark_${Date.now()}.png`;
+        link.download = `${name}_${new Date().getTime()}.png`;
         link.href = canvas.toDataURL('image/png', 1.0);
         link.click();
     };
 </script>
-
 </body>
 </html>
